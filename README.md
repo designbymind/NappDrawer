@@ -159,7 +159,7 @@ drawer.openLeftWindow();
 |-------|------|-------------|
 | `windowDidOpen` | `{window: "left" \| "right"}` | Fired when a drawer is opened |
 | `windowDidClose` | `{}` | Fired when a drawer is closed |
-| `didChangeOffset` | `{offset: Number}` | Fired continuously as drawer scrolls (0.0–1.0) |
+| `sliding` | `{progress: Float, side: "left" \| "right"}` | Fired continuously as drawer scrolls (0.0–1.0) |
 | `open` | — | Fired when drawer opens (gesture-based) |
 | `close` | — | Fired when drawer closes (gesture-based) |
 | `focus` | — | Window focus event |
