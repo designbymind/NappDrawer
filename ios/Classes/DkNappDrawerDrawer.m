@@ -347,7 +347,6 @@ UINavigationController *NavigationControllerForViewProxy(TiUINavigationWindowPro
 
   if (controller) {
     [controller clearWindowAppearanceCallback];
-    [controller clearSlidingCallback];
   }
 }
 

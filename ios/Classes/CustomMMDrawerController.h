@@ -12,20 +12,17 @@
 #import "MMDrawerController.h"
 
 typedef void (^WindowAppearanceChangeBlock)(NSString *state);
-typedef void (^DrawerSlidingBlock)(CGFloat progress, MMDrawerSide drawerSide);
+typedef void (^DrawerSlidingChangeBlock)(CGFloat progress, MMDrawerSide side);
 
 @interface CustomMMDrawerController : MMDrawerController {
   WindowAppearanceChangeBlock _callback;
-  DrawerSlidingBlock _slidingCallback;
-  CADisplayLink *_slidingDisplayLink;
-  CGFloat _lastSlidingProgress;
-  MMDrawerSide _lastSlidingSide;
+  DrawerSlidingChangeBlock _slidingCallback;
 }
 
 - (void)setWindowAppearanceCallback:(void (^)(NSString *))callback;
-// G11: Callback beim Close aufräumen (retain cycle vermeiden)
+- (void)setSlidingCallback:(void (^)(CGFloat progress, MMDrawerSide side))callback;
+
+// Cleanup callbacks / display-link tracking to avoid retain cycles.
 - (void)clearWindowAppearanceCallback;
-- (void)setSlidingCallback:(void (^)(CGFloat progress, MMDrawerSide drawerSide))callback;
-- (void)clearSlidingCallback;
 
 @end
