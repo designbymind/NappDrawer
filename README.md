@@ -19,6 +19,10 @@ The **Napp Drawer** module extends the Appcelerator Titanium Mobile framework wi
 
 ## Quick Start
 
+For the cumulative iOS 3.6.5 changes since 3.2.1, compatibility notes, and
+validation limits, see [CHANGELOG.md](CHANGELOG.md). Download the iOS ZIP from
+the repository's GitHub Releases; intermediate local build ZIPs are not published.
+
 ### Basic Usage
 
 ```javascript
@@ -89,19 +93,33 @@ drawer.openLeftWindow();
 
 ### Properties
 
+The iOS module requires iOS 18.0 or later. Build with Xcode using an iOS 26+
+SDK; newer APIs remain availability-guarded for iOS 18–25 compatibility.
+The manifest's `minsdk` specifies the minimum Titanium SDK, not the iOS version.
+
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `leftWindow` | TiViewProxy | `null` | Left drawer window/view proxy |
 | `rightWindow` | TiViewProxy | `null` | Right drawer window/view proxy |
 | `centerWindow` | TiViewProxy | `null` | Center content window/view proxy |
+| `initialDrawerSide` | String | `center` | iOS 3.6.3+. Creation-time selection: `center`, `left`, or `right`. Positions the side before presentation without animation or haptic; missing side windows fall back to center |
 | `leftDrawerWidth` | Number/String | `-100` | Left drawer width in pixels or dimension string (e.g., `"280dp"`) |
 | `rightDrawerWidth` | Number/String | `-100` | Right drawer width in pixels or dimension string |
 | `openDrawerGestureMode` | Number | `OPEN_MODE_ALL` | Gesture mode for opening the drawer |
+| `openDrawerBezelWidth` | Number | `20` | iOS only. Opening bezel width in points for `OPEN_MODE_BEZEL_PANNING_CENTERWINDOW`; adjustable at runtime. `0` disables bezel opening; negative values clamp to zero. Does not restrict broader opening modes or change closing gestures. Sheet edge zones use `presentedSheetEdgeWidth` separately |
 | `closeDrawerGestureMode` | Number | `CLOSE_MODE_ALL` | Gesture mode for closing the drawer |
+| `closeDrawerBezelWidth` | Number | `20` | iOS 3.6.5+. Closing bezel width in points for `CLOSE_MODE_BEZEL_PANNING_CENTERWINDOW`; adjustable at runtime. `0` disables bezel closing only. Independent of `openDrawerBezelWidth`; broader closing modes remain unrestricted |
 | `animationMode` | Number | `ANIMATION_SLIDE` | Animation mode for drawer transitions |
+| `leftAnimationMode` | Number/null | unset | iOS only. Optional left-side animation override; unset or `null` uses `animationMode` |
+| `rightAnimationMode` | Number/null | unset | iOS only. Optional right-side animation override; unset or `null` uses `animationMode` |
 | `animationVelocity` | Number | `1.0` | Animation velocity factor |
 | `shouldStretchDrawer` | Boolean | `false` | Enable elastic stretch effect on drawer |
 | `showShadow` | Boolean | `true` | Show shadow behind drawer |
+| `hapticFeedback` | String | `none` | iOS only. `none`, `gesture` (pan release), or `all` (pan release, tap-to-close, and programmatic transitions) |
+| `hapticStyle` | String | `light` | iOS only. `light`, `medium`, `heavy`, `soft`, or `rigid` native impact feedback |
+| `shadowRadius` | Number | `10` | iOS only. Shadow blur radius in points, clamped to zero or greater |
+| `shadowColor` | Color | `black` | iOS only. Shadow color; supports Titanium color strings |
+| `shadowOpacity` | Number | `0.8` | iOS only. Shadow opacity, clamped to 0–1; retained while `showShadow` is false |
 | `shadowWidth` | Number/String | `0` | Shadow width in pixels or dimension string |
 | `fading` | Number | `0.0` | Fade degree (0.0–1.0) for center view when drawer is open |
 | `parallaxAmount` | Number | `0.0` | Parallax scroll scale (0.0–1.0) |
@@ -109,7 +127,16 @@ drawer.openLeftWindow();
 | `statusBarStyle` | Number | `STATUSBAR_BLACK` | Status bar text color style |
 | `centerHiddenInteractionMode` | Number | — | Interaction mode when center is hidden |
 | `autoCloseWindows` | Boolean | `true` | Automatically close windows on drawer close |
+| `followsPresentedSheet` | Boolean | `false` | iOS only. Opt in to native `UISheetPresentationController` coordination |
+| `presentedSheetEdgeWidth` | Number | `32` | iOS only. Width of each undimmed-sheet edge zone; use `0` to disable drag-to-open over sheets |
 | `backgroundColor` | TiBlob | — | Background color of the drawer view |
+| `rootBackgroundColor` | Color | `black` | iOS only. Internal drawer root background, visible behind rounded or transparent child content. `transparent` reveals views underneath; it does not change touch handling |
+| `centerCornerMode` | String | `none` | iOS only. `none`, `continuous` (smooth squircle-style corners), or `concentric` (UIKit container-relative corners on iOS 26+, continuous fallback on older iOS) |
+| `centerCornerRadius` | Number | `32` | iOS only. Radius in points for `continuous`, and the pre-iOS-26 fallback for `concentric`. Values below zero clamp to zero |
+| `centerBorderWidth` | Number | `0` | iOS only. Center outline width in points; zero disables the border |
+| `centerBorderColor` | Color | `black` | iOS only. Color of the center outline |
+| `centerBorderOpacity` | Number | `1` | iOS only. Outline opacity, clamped to 0–1 |
+| `centerBorderFollowsSliding` | Boolean | `false` | iOS only. Natively multiply outline opacity by drawer progress; hidden when closed, fully visible when open |
 | `hamburgerIcon` | Boolean | `false` | Show hamburger icon on Android |
 | `hamburgerIconColor` | String | `null` | Custom hamburger icon color (hex string) |
 | `arrowAnimation` | Boolean | `false` | Animate hamburger icon to arrow on Android |
@@ -130,6 +157,8 @@ drawer.openLeftWindow();
 | `closeWindows(animated)` | `animated` (Boolean, optional) | Close all open drawers |
 | `toggleLeftWindow(animated)` | `animated` (Boolean, optional) | Toggle left drawer open/closed |
 | `toggleRightWindow(animated)` | `animated` (Boolean, optional) | Toggle right drawer open/closed |
+| `setLeftDrawerWidth(width)` | Number or `{width, animated}` | iOS 3.6.1+. Set left width through the same path as `leftDrawerWidth` property assignment |
+| `setRightDrawerWidth(width)` | Number or `{width, animated}` | iOS 3.6.1+. Set right width through the same path as `rightDrawerWidth` property assignment |
 | `bounceLeftWindow(animated)` | `animated` (Boolean, optional) | Bounce open the left drawer |
 | `bounceRightWindow(animated)` | `animated` (Boolean, optional) | Bounce open the right drawer |
 
@@ -140,6 +169,8 @@ drawer.openLeftWindow();
 | `isLeftWindowOpen()` | Boolean | Check if left drawer is open |
 | `isRightWindowOpen()` | Boolean | Check if right drawer is open |
 | `isAnyWindowOpen()` | Boolean | Check if any drawer is open |
+| `isAnySheetOpen()` | Boolean | iOS only. Check if any native sheet is currently presented |
+| `getCenterCornerRadius()` | Number | iOS only. Current resolved center radius in points. Returns `0` when rounding is disabled or the drawer is not attached to a window |
 | `getRealLeftViewWidth()` | Number | Get actual left drawer width in pixels |
 | `getRealRightViewWidth()` | Number | Get actual right drawer width in pixels |
 
@@ -151,17 +182,67 @@ drawer.openLeftWindow();
 | `hideStatusBar(animationStyle)` | `animationStyle` (Number, optional) | Hide the status bar |
 | `setStatusBarStyle(style)` | `style` (Number) | Set status bar text color |
 
+#### Native Sheet Integration (iOS)
+
+| Method | Description |
+|--------|-------------|
+| `attachPresentedSheet()` | Attach the currently presented native `UISheetPresentationController` to the drawer's center panel |
+| `detachPresentedSheet()` | Restore the native sheet's original source view and presentation-container transform |
+| `isAnySheetOpen()` | Return whether any native `UISheetPresentationController` is currently presented |
+
+Native sheet integration is opt-in and has no dependency on a particular
+bottom-sheet module. NappDrawer discovers the currently presented
+`UISheetPresentationController`, uses the center panel as its public
+`sourceView` when supported, and synchronizes the public presentation
+container with the center panel during drawer movement.
+
+While the drawer is closed at an undimmed sheet detent, the attached sheet keeps
+its normal interactions and NappDrawer reserves narrow left and right edge-swipe
+zones for opening a drawer. At a dimmed detent, drag-to-open is disabled and the
+drawer can only be opened programmatically. While that drawer is moving or open,
+the attached sheet's content and dimming surface are temporarily shielded from
+touches and NappDrawer's pan and tap recognizers remain available above it for
+closing. Detaching restores the sheet and recognizers. Sheets presented
+independently from a left or right drawer are not attached or shielded
+automatically.
+
+```javascript
+const drawer = NappDrawer.createDrawer({
+  centerWindow,
+  leftWindow,
+  followsPresentedSheet: true,
+  presentedSheetEdgeWidth: 32
+});
+
+sheet.addEventListener('open', () => {
+  drawer.attachPresentedSheet();
+  Ti.API.info('Any sheet open: ' + drawer.isAnySheetOpen());
+});
+
+sheet.addEventListener('close', () => {
+  drawer.detachPresentedSheet();
+});
+```
+
+The explicit lifecycle methods are recommended because the sheet may be
+presented after the drawer is created. When integration is disabled and neither
+method is called, existing NappDrawer behavior is unchanged.
+
+Set `presentedSheetEdgeWidth` to `0` to opt out of sheet-edge drawer opening
+entirely. The property can also be changed at runtime. It has no effect at a
+dimmed detent, where interactive drawer opening is always disabled.
+
 ---
 
 ### Events
 
 | Event | Data | Description |
 |-------|------|-------------|
-| `windowDidOpen` | `{window: "left" \| "right"}` | Fired when a drawer is opened |
+| `windowDidOpen` | `{}` | Fired when a side drawer is opened; query `isLeftWindowOpen()` / `isRightWindowOpen()` for the side |
 | `windowDidClose` | `{}` | Fired when a drawer is closed |
-| `sliding` | `{progress: Float, side: "left" \| "right"}` | Fired continuously as drawer scrolls (0.0–1.0) |
-| `open` | — | Fired when drawer opens (gesture-based) |
-| `close` | — | Fired when drawer closes (gesture-based) |
+| `sliding` | `{progress, side, resizing, drawerWidth, centerOffset}` | Fired during drawer movement and open-drawer resizing. Progress remains 0–1; geometry is in UIKit points. A fully open resize keeps progress at 1 |
+| `drawerTransition` | `{state, side, source}` | iOS only. State is `opening`/`closing` at transition start, then `open`/`closed` on successful completion; source is `gesture` or `programmatic` |
+| `close` | — | Titanium drawer-window close event, not a side-panel close event |
 | `focus` | — | Window focus event |
 | `blur` | — | Window blur event |
 | `open` | — | Window open event |
@@ -210,7 +291,7 @@ var drawer = NappDrawer.createDrawer({
 });
 
 drawer.addEventListener('windowDidOpen', function(e) {
-  Ti.API.info('Opened: ' + e.window);
+  Ti.API.info('Opened: ' + (drawer.isLeftWindowOpen() ? 'left' : 'right'));
 });
 ```
 
@@ -245,8 +326,8 @@ var drawer = NappDrawer.createDrawer({
 
 ## Requirements
 
-- **Titanium SDK**: 13.2.0+
-- **iOS**: 13.0+
+- **Titanium SDK (iOS)**: 13.3.0.GA+ (release build: 13.4.1.GA)
+- **iOS**: 18.0+; build using an iOS 26+ SDK
 - **Android**: API 21+
 
 ---
@@ -270,3 +351,14 @@ email: mm@napp.dk
 twitter: @nappdev
 
 **Maintainer:** Marc Bender
+
+### 3.6.4: closing a drawer project
+
+The drawer window now completes Titanium's superclass `windowWillClose` and `windowDidClose` lifecycle after its child-window/controller cleanup. It no longer recursively calls `close` from `windowDidClose` or emits a separate manual close event. This allows closing a drawer opened above another application window to return to the previous window. Validation in AlloyTestApp is recorded separately from build/package checks.
+
+### 3.6.5: independent opening and closing bezel widths
+
+Includes the 3.6.4 window-close lifecycle fixes and configurable
+`openDrawerBezelWidth` / `closeDrawerBezelWidth` (both default to 20 points).
+These widths affect their respective bezel-pan modes only, not broader enabled
+gesture modes. Existing attached-sheet gesture-shield behavior is unchanged.

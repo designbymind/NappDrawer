@@ -43,7 +43,9 @@
   if (centerWinProxy) {
     [centerWinProxy windowWillClose];
   }
+  [super windowWillClose];
 }
+
 
 - (void)windowDidClose
 {
@@ -65,11 +67,6 @@
   CustomMMDrawerController *ctrl = drawerView ? drawerView.controller : nil;
 
   TiThreadPerformOnMainThread(^{
-    // Only call close: if not already closing (avoids "Window is already closing" warning)
-    if (!closing) {
-      [self close:nil];
-    }
-
     // Remove the CustomMMDrawerController from parent hierarchy
     if (ctrl && ctrl.parentViewController) {
       [ctrl willMoveToParentViewController:nil];
@@ -99,9 +96,9 @@
       [drawerView removeFromSuperview];
     }
 
-    if ([self _hasListeners:@"close"]) {
-      [self fireEvent:@"close"];
-    }
+    // Titanium owns the close event, opened/closing flags, root window stack,
+    // controller release, and self-retain balance. Complete its lifecycle once.
+    [super windowDidClose];
   },
   YES);
 }
@@ -146,6 +143,31 @@
 
 #pragma API
 
+- (void)setLeftDrawerWidth:(id)args
+{
+  ENSURE_SINGLE_ARG(args, NSObject);
+  if (![args isKindOfClass:[NSNumber class]] && ![args isKindOfClass:[NSDictionary class]]) {
+    [NSException raise:NSInvalidArgumentException format:@"setLeftDrawerWidth expects a number or { width, animated }"];
+  }
+  TiThreadPerformOnMainThread(^{
+    // KVC also invokes this method during createDrawer(). Store the value
+    // without forcing the view/controller hierarchy to initialize early.
+    // An existing view receives the notification; a future view reads it at init.
+    [self replaceValue:args forKey:@"leftDrawerWidth" notification:YES];
+  }, YES);
+}
+
+- (void)setRightDrawerWidth:(id)args
+{
+  ENSURE_SINGLE_ARG(args, NSObject);
+  if (![args isKindOfClass:[NSNumber class]] && ![args isKindOfClass:[NSDictionary class]]) {
+    [NSException raise:NSInvalidArgumentException format:@"setRightDrawerWidth expects a number or { width, animated }"];
+  }
+  TiThreadPerformOnMainThread(^{
+    [self replaceValue:args forKey:@"rightDrawerWidth" notification:YES];
+  }, YES);
+}
+
 - (void)setStatusBarStyle_:(NSNumber *)style
 {
   ENSURE_UI_THREAD(setStatusBarStyle_, style);
@@ -184,6 +206,32 @@
     [(DkNappDrawerDrawer *)[self view] bounceRightWindow:args];
   },
       NO);
+}
+
+- (void)attachPresentedSheet:(id)args
+{
+  TiThreadPerformOnMainThread(^{
+    [(DkNappDrawerDrawer *)[self view] attachPresentedSheet:args];
+  },
+      NO);
+}
+
+- (void)detachPresentedSheet:(id)args
+{
+  TiThreadPerformOnMainThread(^{
+    [(DkNappDrawerDrawer *)[self view] detachPresentedSheet:args];
+  },
+      NO);
+}
+
+- (NSNumber *)isAnySheetOpen:(id)args
+{
+  return [(DkNappDrawerDrawer *)[self view] isAnySheetOpen:args];
+}
+
+- (NSNumber *)getCenterCornerRadius:(id)args
+{
+  return [(DkNappDrawerDrawer *)[self view] getCenterCornerRadius:args];
 }
 
 - (NSNumber *)isAnyWindowOpen:(id)args

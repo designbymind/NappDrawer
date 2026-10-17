@@ -43,6 +43,10 @@
 - (void)toggleRightWindow:(id)args;
 - (void)bounceLeftWindow:(id)args;
 - (void)bounceRightWindow:(id)args;
+- (void)attachPresentedSheet:(id)args;
+- (void)detachPresentedSheet:(id)args;
+- (NSNumber *)isAnySheetOpen:(id)args;
+- (NSNumber *)getCenterCornerRadius:(id)args;
 - (NSNumber *)isAnyWindowOpen:(id)args;
 - (NSNumber *)isLeftWindowOpen:(id)args;
 - (NSNumber *)isRightWindowOpen:(id)args;

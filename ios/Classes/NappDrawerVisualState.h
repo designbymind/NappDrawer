@@ -13,6 +13,8 @@
 
 @interface NappDrawerVisualState : NSObject
 
++ (MMDrawerControllerDrawerVisualStateBlock)visualStateBlockForAnimationMode:(NSInteger)mode;
+
 
 +(MMDrawerControllerDrawerVisualStateBlock)slideAndScaleVisualStateBlock;
 

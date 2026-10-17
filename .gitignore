@@ -1,2 +1,3 @@
 ios/Build
 .DS_Store
+ios/dist/*.zip
