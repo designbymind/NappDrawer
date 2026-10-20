@@ -305,6 +305,12 @@ UINavigationController *NavigationControllerForViewProxy(TiUINavigationWindowPro
     if ([self.proxy valueForUndefinedKey:@"animationMode"] != nil) {
       [self setAnimationMode_:[self.proxy valueForUndefinedKey:@"animationMode"]];
     }
+    if ([self.proxy valueForUndefinedKey:@"animationMinScale"] != nil) {
+      [self setAnimationMinScale_:[self.proxy valueForUndefinedKey:@"animationMinScale"]];
+    }
+    if ([self.proxy valueForUndefinedKey:@"animationScaleFade"] != nil) {
+      [self setAnimationScaleFade_:[self.proxy valueForUndefinedKey:@"animationScaleFade"]];
+    }
     if ([self.proxy valueForUndefinedKey:@"leftAnimationMode"] != nil) {
       [self setLeftAnimationMode_:[self.proxy valueForUndefinedKey:@"leftAnimationMode"]];
     }
@@ -712,6 +718,20 @@ UINavigationController *NavigationControllerForViewProxy(TiUINavigationWindowPro
   ENSURE_UI_THREAD(setAnimationMode_, args);
   [controller setDrawerVisualStateBlock:
       [NappDrawerVisualState visualStateBlockForAnimationMode:[TiUtils intValue:args]]];
+}
+
+- (void)setAnimationMinScale_:(id)args
+{
+  ENSURE_UI_THREAD(setAnimationMinScale_, args);
+  ENSURE_SINGLE_ARG(args, NSNumber);
+  controller.animationMinScale = [TiUtils floatValue:args def:0.90f];
+}
+
+- (void)setAnimationScaleFade_:(id)args
+{
+  ENSURE_UI_THREAD(setAnimationScaleFade_, args);
+  ENSURE_SINGLE_ARG(args, NSNumber);
+  controller.animationScaleFade = [TiUtils boolValue:args def:NO];
 }
 
 - (void)setLeftAnimationMode_:(id)args

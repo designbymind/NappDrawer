@@ -8,6 +8,7 @@
  */
 
 #import "NappDrawerVisualState.h"
+#import "CustomMMDrawerController.h"
 #import "MMDrawerVisualState.h"
 #import <QuartzCore/QuartzCore.h>
 
@@ -22,6 +23,7 @@
         case 5: return [self parallax5VisualStateBlock];
         case 6: return [self parallax7VisualStateBlock];
         case 7: return [self fadeVisualStateBlock];
+        case 8: return [self scaleVisualStateBlock];
         case 3:
         case 100:
         default: return [self noneVisualStateBlock];
@@ -38,7 +40,10 @@
     MMDrawerControllerDrawerVisualStateBlock visualStateBlock = ^(MMDrawerController *drawerController, MMDrawerSide drawerSide, CGFloat percentVisible) {
         if (drawerSide == MMDrawerSideNone) return;
 
-        CGFloat minScale = 0.90;
+        // Read on every update, so existing global and per-side blocks use
+        // runtime property changes without rebuilding or clearing overrides.
+        CGFloat minScale = [drawerController isKindOfClass:CustomMMDrawerController.class]
+            ? ((CustomMMDrawerController *)drawerController).animationMinScale : 0.90;
         CGFloat scale = minScale + (percentVisible * (1.0 - minScale));
         CATransform3D scaleTransform = CATransform3DMakeScale(scale, scale, scale);
 
@@ -58,6 +63,24 @@
         [sideDrawerViewController.view setAlpha:percentVisible];
     };
     return visualStateBlock;
+}
+
++ (MMDrawerControllerDrawerVisualStateBlock)scaleVisualStateBlock {
+    return ^(MMDrawerController *drawerController, MMDrawerSide drawerSide, CGFloat percentVisible) {
+        if (drawerSide == MMDrawerSideNone) return;
+
+        CustomMMDrawerController *customController =
+            [drawerController isKindOfClass:CustomMMDrawerController.class]
+                ? (CustomMMDrawerController *)drawerController : nil;
+        CGFloat minScale = customController ? customController.animationMinScale : 0.90;
+        CGFloat progress = MIN(MAX(percentVisible, 0.0), 1.0);
+        CGFloat scale = minScale + (progress * (1.0 - minScale));
+        UIViewController *sideController = drawerSide == MMDrawerSideLeft
+            ? drawerController.leftDrawerViewController : drawerController.rightDrawerViewController;
+        // Pure scaling: do not retain translation or opacity from a previous mode.
+        sideController.view.layer.transform = CATransform3DMakeScale(scale, scale, scale);
+        sideController.view.alpha = customController.animationScaleFade ? progress : 1.0;
+    };
 }
 
 + (MMDrawerControllerDrawerVisualStateBlock)slideVisualStateBlock {

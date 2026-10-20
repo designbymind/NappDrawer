@@ -12,7 +12,8 @@ Thanks to the folks at Mutual Mobile for their great work with MMDrawerControlle
 
 Download the versioned iOS ZIP from GitHub Releases. Local builds are produced
 in `ios/dist/`. See [the changelog](../CHANGELOG.md) for all changes since 3.2.1;
-the 3.6.5 release includes the intermediate local-build updates, including 3.6.4.
+3.6.6 adds scale controls and stable rounded corners; 3.6.5 includes the earlier
+intermediate local-build updates, including 3.6.4.
 
 ## Referencing the module in your Ti mobile application
 
@@ -236,10 +237,16 @@ var drawer = NappDrawerModule.createDrawer({
 ```
 
 `continuous` uses a smooth squircle-style curve with `centerCornerRadius` in
-points. `concentric` uses UIKit's public container-concentric configuration on
-iOS 26+, with uniform corners. The resolved radius depends on the containing
-geometry and can change as the center moves. It is not a getter for the physical
-screen radius. On older iOS it uses the configured continuous fallback radius.
+points. In 3.6.6, `concentric` resolves UIKit's public container-concentric
+radius on iOS 26+ using an invisible, non-interactive measurement view at the
+center's aligned resting geometry. The real center, border, and shadow use that
+fixed radius, so moving the center does not flatten its corners. This also works
+with `initialDrawerSide: 'left'` or `'right'` without visibly repositioning the
+center or requiring a JavaScript radius query. The measurement is refreshed on
+appearance/layout for window geometry changes. Until attached/layout is available,
+or if UIKit reports no positive radius, `centerCornerRadius` is the fallback.
+It is not a getter for the physical screen radius. On older iOS the configured
+continuous fallback radius is used directly.
 
 The border follows the same corner configuration as the clipping surface and
 does not intercept touches. The center's shadow remains outside the clipping
@@ -259,8 +266,10 @@ drawer.addEventListener('sliding', function(e) {
 ```
 
 `centerCornerMode: 'none'` disables module-provided rounding, and
-`centerBorderWidth: 0` disables the border. A radius is not applied to concentric
-corners on iOS 26+; switch to `continuous` to control the radius explicitly.
+`centerBorderWidth: 0` disables the border. Square corners remain the default;
+no measurement view is created unless concentric rounding is enabled.
+`centerCornerRadius` is a fallback in concentric mode; use `continuous` to
+control the radius explicitly on every supported iOS version.
 
 Read the resolved radius after the drawer is open and laid out:
 
@@ -270,7 +279,8 @@ Ti.API.info('Resolved center corner radius: ' + radius + 'pt');
 ```
 
 The return value is a number in UIKit points, not pixels. In concentric mode on
-iOS 26+, it comes from UIKit's effective corner geometry; in continuous mode
+iOS 26+, it reports the applied stable radius resolved from aligned geometry
+(or the fallback), even while a side drawer is open. In continuous mode
 or on iOS 18–25 it reflects the continuous radius. It returns `0` when rounding
 is disabled or the drawer is not attached to a window. Query again after layout
 or mode changes if you need an updated value. `centerCornerRadius` remains the
@@ -390,6 +400,38 @@ mainWindow.setAnimationMode(NappDrawerModule.ANIMATION_SLIDE);
 | ANIMATION_PARALLAX_FACTOR_7 | The slide animation, but with a parallax effect. The higher factor equals less animation distance rate. This is 7 times slower than ANIMATION_SLIDE. |
 | ANIMATION_FADE | Fading out/in the side window. |
 | ANIMATION_SLIDE_SCALE | The Side window will slide and scale simultaneously. |
+| ANIMATION_SCALE | Scale the side window without translation; optionally fade using `animationScaleFade`. |
+
+### AnimationMinScale (3.6.6+)
+
+```javascript
+mainWindow.animationMode = NappDrawerModule.ANIMATION_SLIDE_SCALE;
+mainWindow.animationMinScale = 0.95; // Subtler than the backward-compatible 0.90 default.
+```
+
+Set `animationMinScale` at creation or runtime. It controls side-drawer scaling,
+not center-window scaling, and applies when the shared mode or a per-side
+override uses `ANIMATION_SLIDE_SCALE` or `ANIMATION_SCALE`. Scale interpolates from this value to 1
+as opening progress reaches 1. A value of 1 disables scaling, but leaves the
+mode's translation and fading intact. Values clamp to 0–1; non-finite values
+reset to 0.90. Runtime changes are read on subsequent visual updates, without
+resetting mode overrides. Other animation modes are unaffected.
+
+### Scale-only animation (3.6.6+)
+
+```javascript
+mainWindow.animationMode = NappDrawerModule.ANIMATION_SCALE;
+mainWindow.animationMinScale = 0.95;
+mainWindow.animationScaleFade = true; // Optional; defaults to false for pure scale.
+```
+
+`ANIMATION_SCALE` scales the side drawer in place; it does not add the side
+translation used by `ANIMATION_SLIDE_SCALE`. The center still moves normally to
+reveal the drawer. By default the side stays opaque; `animationScaleFade: true`
+adds fading with opening progress. Scale/fade progress is capped at 0–1 during
+overshoot. Both properties support creation-time and runtime assignments and
+per-side mode overrides. `animationScaleFade` affects only `ANIMATION_SCALE`;
+the existing slide-scale mode retains its original translation and fading.
 
 ### AnimationVelocity
 

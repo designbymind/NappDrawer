@@ -1,5 +1,31 @@
 # Changelog
 
+## iOS 3.6.6
+
+- Keep opt-in concentric corners rounded during drawer movement by resolving
+  UIKit's radius on an invisible aligned measurement view and applying a fixed
+  radius to the real center, border, and shadow. Supports initial left/right
+  startup without moving the visible center or JavaScript timing. Refresh on
+  appearance/layout and use `centerCornerRadius` when geometry is not yet
+  attached/resolved. `none` remains the default and creates no measurement view.
+
+- Add `ANIMATION_SCALE` (8), scaling the side drawer in place without side
+  translation. Add `animationScaleFade` (false by default) for optional fading
+  in that mode. Support shared/per-side modes and runtime updates, without
+  changing existing animation constants or slide-scale translation/fading.
+
+- Add `animationMinScale` for `ANIMATION_SLIDE_SCALE` and `ANIMATION_SCALE`,
+  preserving the existing 0.90 default. Both shared and per-side modes read it
+  on each visual update.
+- Accept creation-time and runtime assignments; clamp finite values to 0–1 and
+  reset non-finite values to 0.90. A value of 1 disables only scaling, not the
+  translation/fade. The side drawer grows to scale 1 as it opens; the center
+  window and other animation modes are unaffected.
+- Update the API documentation and Classic example, including scale-only/fade
+  choices in the animation cycle and initial right-drawer startup.
+- The user reported the stable-corner fix working. Native build/package checks
+  are separate evidence; no fresh agent-run simulator/device regression is claimed.
+
 ## iOS 3.6.5
 
 This is the first published release after iOS 3.2.1. It consolidates the local

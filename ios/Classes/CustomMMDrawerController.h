@@ -28,6 +28,8 @@ typedef void (^DrawerTransitionChangeBlock)(NSString *state, MMDrawerSide side, 
 @property (nonatomic, copy) NSString *hapticStyle;
 @property (nonatomic, assign) CGFloat openDrawerBezelWidth;
 @property (nonatomic, assign) CGFloat closeDrawerBezelWidth;
+@property (nonatomic, assign) CGFloat animationMinScale;
+@property (nonatomic, assign) BOOL animationScaleFade;
 
 // Optional native UISheetPresentationController integration.
 @property (nonatomic, assign) BOOL followsPresentedSheet;

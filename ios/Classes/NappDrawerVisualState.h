@@ -17,6 +17,7 @@
 
 
 +(MMDrawerControllerDrawerVisualStateBlock)slideAndScaleVisualStateBlock;
++(MMDrawerControllerDrawerVisualStateBlock)scaleVisualStateBlock;
 
 +(MMDrawerControllerDrawerVisualStateBlock)slideVisualStateBlock;
 

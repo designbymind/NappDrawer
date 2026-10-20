@@ -186,7 +186,7 @@ function createCenterNavWindow() {
 		// Clear the independent startup modes before cycling the shared mode.
 		drawer.leftAnimationMode = null;
 		drawer.rightAnimationMode = null;
-		if (animationMode == 5) {
+		if (animationMode == 7) {
 			animationMode = 0;
 		} else {
 			animationMode++;
@@ -215,6 +215,16 @@ function createCenterNavWindow() {
 			case 5:
 				drawer.animationMode = NappDrawerModule.ANIMATION_SLIDE_SCALE;
 				animationModeBtn.title = 'animation: Slide & Scale';
+				break;
+			case 6:
+				drawer.animationMode = NappDrawerModule.ANIMATION_SCALE;
+				drawer.animationScaleFade = false;
+				animationModeBtn.title = 'animation: Scale only';
+				break;
+			case 7:
+				drawer.animationMode = NappDrawerModule.ANIMATION_SCALE;
+				drawer.animationScaleFade = true;
+				animationModeBtn.title = 'animation: Scale & Fade';
 				break;
 		}
 	});
@@ -363,7 +373,7 @@ var mainWindow = createCenterNavWindow();
 var drawer = NappDrawerModule.createDrawer({
 	leftWindow: createAPIExampleWindow(),
 	centerWindow: mainWindow,
-  initialDrawerSide: 'left', // 'center' preserves the original closed startup; 'right' starts on the other side.
+  initialDrawerSide: 'right', // Exercises stable corner measurement with an initially displaced center; 'center' starts closed.
 	rightWindow: Ti.UI.createWindow({
 		backgroundColor: '#FFF'
 	}),
@@ -374,13 +384,15 @@ var drawer = NappDrawerModule.createDrawer({
 	hapticFeedback: 'gesture', // Set to 'all' to include code/button-driven transitions.
 	hapticStyle: 'light',
 	animationMode: NappDrawerModule.ANIMATION_SLIDE,
+	animationMinScale: 0.90, // For ANIMATION_SLIDE_SCALE and ANIMATION_SCALE: 1 disables scaling.
+	animationScaleFade: false, // Optional fade for ANIMATION_SCALE only.
 	leftAnimationMode: NappDrawerModule.ANIMATION_PARALLAX_FACTOR_7,
 	rightAnimationMode: NappDrawerModule.ANIMATION_SLIDE,
 	followsPresentedSheet: true,
 	presentedSheetEdgeWidth: 32, // Set to 0 to disable sheet-edge opening.
 	rootBackgroundColor: '#eee', // Background behind rounded center-window corners.
-	centerCornerMode: 'concentric', // Use 'continuous' for an explicit squircle-style radius.
-	centerCornerRadius: 32, // Also the concentric fallback on iOS 18–25.
+	centerCornerMode: 'concentric', // Stable aligned corners, even with initialDrawerSide left/right. Use 'none' for square corners.
+	centerCornerRadius: 32, // Fallback on iOS 18–25, before layout, or if UIKit cannot resolve a positive radius.
 	centerBorderWidth: 1,
 	centerBorderColor: '#888',
 	centerBorderOpacity: 0.8,

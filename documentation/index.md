@@ -7,9 +7,9 @@ checks and use their documented fallback on iOS 18–25.
 
 ## Description
 
-Native side-drawer navigation for Titanium. The iOS 3.6.5 release consolidates
-the sheet, appearance, animation, resizing, haptics, lifecycle, and gesture
-additions developed since the published iOS 3.2.1 baseline. Android is unchanged.
+Native side-drawer navigation for Titanium. iOS 3.6.6 adds scale controls and
+stable rounded corners to the sheet, appearance, animation, resizing, haptics,
+lifecycle, and gesture additions consolidated in 3.6.5. Android is unchanged.
 
 ## Accessing the NappDrawer Module
 
@@ -20,6 +20,39 @@ To access this module from JavaScript, you would do the following:
 The nappdrawer variable is a reference to the Module object.
 
 ## Reference
+
+### Minimum slide-scale amount (iOS 3.6.6+)
+
+`animationMinScale` defaults to `0.90`, preserving the previous
+`ANIMATION_SLIDE_SCALE` behavior. It also controls the new `ANIMATION_SCALE` mode.
+It applies to the side drawer, not the center
+window, for both shared and per-side animation modes. For example:
+
+```javascript
+drawer.animationMode = nappdrawer.ANIMATION_SLIDE_SCALE;
+drawer.animationMinScale = 0.95;
+```
+
+The property also works in `createDrawer()`. Scale interpolates from the minimum
+to 1 as opening progress reaches 1. Use 1 to disable scaling while retaining
+translation/fading. Values clamp to 0–1; non-finite values reset to 0.90. Runtime
+assignments are read on subsequent visual updates without rebuilding animation
+blocks or clearing side overrides. Other modes are unaffected.
+
+### Scale-only animation (iOS 3.6.6+)
+
+```javascript
+drawer.animationMode = nappdrawer.ANIMATION_SCALE;
+drawer.animationMinScale = 0.95;
+drawer.animationScaleFade = true; // Optional; default false keeps the side opaque.
+```
+
+The side scales in place without translation. The center still moves normally
+to reveal it. `animationScaleFade` adds opacity animation with progress, for
+`ANIMATION_SCALE` only; it does not alter the existing slide-scale mode's fade.
+Works with `leftAnimationMode` / `rightAnimationMode` as well as the shared mode.
+Properties can be set at creation or runtime; updates are read on subsequent
+visual updates. Scale/fade progress is capped at 0–1 during overshoot.
 
 ### Native sheet integration
 
@@ -149,7 +182,7 @@ or afterward. Defaults preserve square center corners without a border.
 | `shadowColor` | `black` | Shadow color |
 | `shadowOpacity` | `0.8` | Shadow opacity, clamped to 0–1 |
 | `centerCornerMode` | `none` | `none`, `continuous`, or `concentric` |
-| `centerCornerRadius` | `32` | Continuous radius in points, also the older-iOS concentric fallback |
+| `centerCornerRadius` | `32` | Continuous radius in points; concentric fallback on older iOS, before attachment/layout, or when UIKit reports no positive radius |
 | `centerBorderWidth` | `0` | Border width in points; zero disables it |
 | `centerBorderColor` | `black` | Outline color |
 | `centerBorderOpacity` | `1` | Outline opacity, clamped to 0–1 |
@@ -157,8 +190,16 @@ or afterward. Defaults preserve square center corners without a border.
 
 `continuous` uses a smooth squircle-style curve. `concentric` uses UIKit's
 container-concentric radius on iOS 26+, with uniform corners; older iOS uses
-the continuous fallback. Concentric geometry depends on the containing view
-and is not an API for reading the physical screen radius.
+the continuous fallback. In 3.6.6, native measurement uses the center's aligned
+resting geometry, not its translated position. The real center and border keep
+that fixed radius during dragging, finishing animations, and resizing, including
+`initialDrawerSide: 'left'` / `'right'`. Measurement refreshes on appearance/layout;
+before attachment/layout, or when UIKit reports no positive radius, the configured
+`centerCornerRadius` is used. No visible recentering or JavaScript startup query
+is needed. This is not an API for reading the physical screen radius.
+
+Rounding remains optional: omit `centerCornerMode` or set it to `'none'` for
+square corners. Set `centerBorderWidth: 0` to disable the independent border.
 
 ```javascript
 var drawer = nappdrawer.createDrawer({
@@ -185,8 +226,8 @@ The existing shadow offset is unchanged.
 
 `drawer.getCenterCornerRadius()` returns the currently resolved center corner
 radius in UIKit points. Call it after the drawer opens and layout is available.
-For iOS 26+ concentric mode it reports UIKit's effective geometry, rather than
-the `centerCornerRadius` fallback input. It returns `0` when rounding is disabled
+For iOS 26+ concentric mode it reports the applied stable aligned radius (or
+the configured fallback), including when a side is open. It returns `0` when rounding is disabled
 or the drawer is not attached to a window. This is the center's radius, not a
 private getter for the physical display radius.
 
@@ -194,7 +235,7 @@ private getter for the physical display radius.
 
 See the bundled `example/app.js` for sheet attachment, styling, resizing,
 haptics, per-side animations, startup-side selection, and bezel configuration.
-Set `<module platform="iphone" version="3.6.5">dk.napp.drawer</module>` in your
+Set `<module platform="iphone" version="3.6.6">dk.napp.drawer</module>` in your
 application's `tiapp.xml`. The minimum Titanium SDK is 13.3.0.GA.
 
 ## Author

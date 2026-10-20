@@ -19,7 +19,7 @@ The **Napp Drawer** module extends the Appcelerator Titanium Mobile framework wi
 
 ## Quick Start
 
-For the cumulative iOS 3.6.5 changes since 3.2.1, compatibility notes, and
+For the cumulative iOS changes through 3.6.6, compatibility notes, and
 validation limits, see [CHANGELOG.md](CHANGELOG.md). Download the iOS ZIP from
 the repository's GitHub Releases; intermediate local build ZIPs are not published.
 
@@ -47,15 +47,16 @@ drawer.openLeftWindow();
 
 | Constant | Value | Description |
 |----------|-------|-------------|
-| `ANIMATION_SLIDE` | `1` | Scale animation — center view scales down |
-| `ANIMATION_SLIDE` | `2` | Slide animation — center view slides up |
+| `ANIMATION_SLIDE_SCALE` | `1` | Side drawer slides, fades, and scales from `animationMinScale` to 1 as it opens |
+| `ANIMATION_SLIDE` | `2` | Horizontal slide animation |
 | `ANIMATION_PARALLAX_FACTOR_3` | `4` | Parallax with factor 3.0 |
 | `ANIMATION_PARALLAX_FACTOR_5` | `5` | Parallax with factor 5.0 |
-| `ANIMATION_PARALLAX_FACTOR_7` | `7` | Parallax with factor 7.0 |
+| `ANIMATION_PARALLAX_FACTOR_7` | `6` | Parallax with factor 7.0 |
 | `ANIMATION_FADE` | `7` | Fade animation |
+| `ANIMATION_SCALE` | `8` | iOS: side-drawer scaling only, with optional `animationScaleFade`; no side-drawer translation |
 | `ANIMATION_NONE` | `100` | No animation |
 
-> **Note:** Android supports `ANIMATION_SCALE`, `ANIMATION_SLIDEUP`, `ANIMATION_ZOOM` internally. iOS uses `slideAndScale`, `slide`, `parallax`, `fade`, `none`.
+> **Note:** New 3.6.6 scale configuration is iOS-only; Android animation behavior is unchanged.
 
 #### Open/Close Gesture Modes
 
@@ -110,6 +111,8 @@ The manifest's `minsdk` specifies the minimum Titanium SDK, not the iOS version.
 | `closeDrawerGestureMode` | Number | `CLOSE_MODE_ALL` | Gesture mode for closing the drawer |
 | `closeDrawerBezelWidth` | Number | `20` | iOS 3.6.5+. Closing bezel width in points for `CLOSE_MODE_BEZEL_PANNING_CENTERWINDOW`; adjustable at runtime. `0` disables bezel closing only. Independent of `openDrawerBezelWidth`; broader closing modes remain unrestricted |
 | `animationMode` | Number | `ANIMATION_SLIDE` | Animation mode for drawer transitions |
+| `animationMinScale` | Number | `0.90` | iOS 3.6.6+. Minimum side-drawer scale for `ANIMATION_SLIDE_SCALE` and `ANIMATION_SCALE`, including per-side overrides. Interpolates to 1 as the drawer opens. Runtime changes apply on subsequent visual updates. Clamped to 0–1; non-finite values reset to 0.90. Does not scale the center window or affect other modes |
+| `animationScaleFade` | Boolean | `false` | iOS 3.6.6+. Optional opacity animation for `ANIMATION_SCALE` only. `false` keeps the side drawer opaque; `true` fades with opening progress. Shared and per-side modes read runtime updates. Does not change the existing fade in `ANIMATION_SLIDE_SCALE` |
 | `leftAnimationMode` | Number/null | unset | iOS only. Optional left-side animation override; unset or `null` uses `animationMode` |
 | `rightAnimationMode` | Number/null | unset | iOS only. Optional right-side animation override; unset or `null` uses `animationMode` |
 | `animationVelocity` | Number | `1.0` | Animation velocity factor |
@@ -131,8 +134,8 @@ The manifest's `minsdk` specifies the minimum Titanium SDK, not the iOS version.
 | `presentedSheetEdgeWidth` | Number | `32` | iOS only. Width of each undimmed-sheet edge zone; use `0` to disable drag-to-open over sheets |
 | `backgroundColor` | TiBlob | — | Background color of the drawer view |
 | `rootBackgroundColor` | Color | `black` | iOS only. Internal drawer root background, visible behind rounded or transparent child content. `transparent` reveals views underneath; it does not change touch handling |
-| `centerCornerMode` | String | `none` | iOS only. `none`, `continuous` (smooth squircle-style corners), or `concentric` (UIKit container-relative corners on iOS 26+, continuous fallback on older iOS) |
-| `centerCornerRadius` | Number | `32` | iOS only. Radius in points for `continuous`, and the pre-iOS-26 fallback for `concentric`. Values below zero clamp to zero |
+| `centerCornerMode` | String | `none` | iOS only. `none`, `continuous` (smooth squircle-style corners), or `concentric` (3.6.6: resolve UIKit's aligned radius on iOS 26+ and hold it fixed during movement, including initial left/right startup; continuous fallback on older iOS) |
+| `centerCornerRadius` | Number | `32` | iOS only. Radius in points for `continuous`; fallback for `concentric` on older iOS, before attachment/layout, or when UIKit reports no positive radius. Values below zero clamp to zero |
 | `centerBorderWidth` | Number | `0` | iOS only. Center outline width in points; zero disables the border |
 | `centerBorderColor` | Color | `black` | iOS only. Color of the center outline |
 | `centerBorderOpacity` | Number | `1` | iOS only. Outline opacity, clamped to 0–1 |
@@ -362,3 +365,18 @@ Includes the 3.6.4 window-close lifecycle fixes and configurable
 `openDrawerBezelWidth` / `closeDrawerBezelWidth` (both default to 20 points).
 These widths affect their respective bezel-pan modes only, not broader enabled
 gesture modes. Existing attached-sheet gesture-shield behavior is unchanged.
+
+### 3.6.6: scale controls and stable rounded corners
+
+Add `animationMinScale` (default `0.90`) for `ANIMATION_SLIDE_SCALE` and the new
+`ANIMATION_SCALE` mode. The latter scales without side-drawer translation;
+`animationScaleFade: true` optionally adds fading (default `false`). All support
+the shared/per-side animation paths and runtime updates. Existing modes retain
+their behavior, including slide-scale translation/fading.
+
+Opt-in `centerCornerMode: 'concentric'` now resolves the aligned center radius
+natively, then applies that fixed radius to the moving center, border, and
+shadow. This avoids corners flattening during movement, including startup with
+`initialDrawerSide: 'right'`. No JavaScript radius capture is required. Omit the
+corner mode or use `'none'` to keep square corners. See the changelog and iOS
+README for geometry fallback and validation details.

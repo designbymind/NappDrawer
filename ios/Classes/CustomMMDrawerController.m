@@ -146,6 +146,8 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   BOOL _isDirectlyDraggingDrawer;
   BOOL _isAnimatingAttachedSheetWithDrawer;
   NappDrawerCenterStyleView *_centerStyleView;
+  UIView *_centerCornerMeasurementContainer;
+  UIView *_centerCornerMeasurementView;
   BOOL _isAnimatingCenterBorder;
   CGFloat _centerStyleProgress;
   BOOL _hasConfiguredShadowDefaults;
@@ -184,6 +186,7 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
 - (void)setAttachedSheetInteractionBlocked:(BOOL)blocked;
 - (void)updateAttachedSheetInteractionForCurrentDrawerState;
 - (void)updateCenterStyle;
+- (CGFloat)alignedConcentricCornerRadius;
 - (void)applyConfiguredShadow;
 - (void)applyPendingDrawerWidth;
 - (UIImpactFeedbackGenerator *)drawerHapticGenerator;
@@ -210,6 +213,8 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   if (self) {
     _openDrawerBezelWidth = 20.0f;
     _closeDrawerBezelWidth = 20.0f;
+    _animationMinScale = 0.90f;
+    _animationScaleFade = NO;
     _presentedSheetEdgeWidth = 32.0f;
     _centerCornerMode = @"none";
     _centerCornerRadius = 32.0f;
@@ -285,6 +290,12 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   [self updateCenterStyle];
 }
 
+- (void)viewWillAppear:(BOOL)animated
+{
+  [super viewWillAppear:animated];
+  [self updateCenterStyle];
+}
+
 - (void)setCenterCornerMode:(NSString *)value
 {
   _centerCornerMode = [value copy];
@@ -327,6 +338,11 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   [self updateShadowForCenterView];
 }
 
+- (void)setAnimationMinScale:(CGFloat)value
+{
+  _animationMinScale = isfinite(value) ? MIN(MAX(value, 0.0f), 1.0f) : 0.90f;
+}
+
 - (void)setShadowColor:(UIColor *)value
 {
   _shadowColor = value ?: UIColor.blackColor;
@@ -351,6 +367,45 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   layer.shadowColor = _shadowColor.CGColor;
 }
 
+- (CGFloat)alignedConcentricCornerRadius
+{
+  if (@available(iOS 26.0, *)) {
+    UIView *parent = self.childControllerContainerView;
+    if (!parent.window || CGRectIsEmpty(parent.bounds)) {
+      // Creation-time styling may precede window attachment. Retry at layout;
+      // never sample the displaced center when initialDrawerSide is left/right.
+      return _centerCornerRadius;
+    }
+    if (!_centerCornerMeasurementContainer) {
+      // Mirror centerContainerView -> clipping view, but at the closed center's
+      // geometry. No content is moved and no drawer state/lifecycle is changed.
+      _centerCornerMeasurementContainer = [[UIView alloc] initWithFrame:parent.bounds];
+      _centerCornerMeasurementContainer.alpha = 0.0f;
+      _centerCornerMeasurementContainer.userInteractionEnabled = NO;
+      _centerCornerMeasurementContainer.accessibilityElementsHidden = YES;
+      _centerCornerMeasurementView = [[UIView alloc] initWithFrame:_centerCornerMeasurementContainer.bounds];
+      _centerCornerMeasurementView.userInteractionEnabled = NO;
+      _centerCornerMeasurementView.cornerConfiguration =
+          [UICornerConfiguration configurationWithUniformRadius:[UICornerRadius containerConcentricRadius]];
+      [_centerCornerMeasurementContainer addSubview:_centerCornerMeasurementView];
+    }
+    [UIView performWithoutAnimation:^{
+      if (_centerCornerMeasurementContainer.superview != parent) {
+        [parent insertSubview:_centerCornerMeasurementContainer atIndex:0];
+      }
+      _centerCornerMeasurementContainer.frame = parent.bounds;
+      _centerCornerMeasurementView.frame = _centerCornerMeasurementContainer.bounds;
+      [_centerCornerMeasurementContainer layoutIfNeeded];
+      [_centerCornerMeasurementView layoutIfNeeded];
+    }];
+    CGFloat radius = [_centerCornerMeasurementView effectiveRadiusForCorner:UIRectCornerAllCorners];
+    // A rectangular/unresolved container can legitimately report zero. Keep
+    // opted-in rounding using the configured fallback rather than flattening.
+    return isfinite(radius) && radius > 0.0f ? radius : _centerCornerRadius;
+  }
+  return _centerCornerRadius;
+}
+
 - (void)updateCenterStyle
 {
   if (!self.isViewLoaded) {
@@ -360,6 +415,12 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   UIView *container = self.centerContainerView;
   UIView *content = self.centerViewController.view;
   BOOL rounded = _centerCornerMode != nil && ![_centerCornerMode isEqualToString:@"none"];
+  BOOL concentric = rounded && [_centerCornerMode isEqualToString:@"concentric"];
+  if (!concentric) {
+    [_centerCornerMeasurementContainer removeFromSuperview];
+    _centerCornerMeasurementContainer = nil;
+    _centerCornerMeasurementView = nil;
+  }
 
   if (!rounded && _centerBorderWidth <= 0.0f) {
     if (_centerStyleView) {
@@ -399,20 +460,19 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   _centerStyleView.borderView.frame = _centerStyleView.bounds;
 
   CGFloat radius = rounded ? _centerCornerRadius : 0.0f;
-  BOOL concentric = rounded && [_centerCornerMode isEqualToString:@"concentric"];
   if (@available(iOS 26.0, *)) {
-    UICornerRadius *cornerRadius = concentric
-        ? [UICornerRadius containerConcentricRadius]
-        : [UICornerRadius fixedRadius:radius];
-    // Uniform radii keep both sides of a translated center panel alike.
-    UICornerConfiguration *configuration =
-        [UICornerConfiguration configurationWithUniformRadius:cornerRadius];
-    if (![_centerStyleView.cornerConfiguration isEqual:configuration]) {
-      _centerStyleView.cornerConfiguration = configuration;
-      _centerStyleView.borderView.cornerConfiguration = configuration;
-    }
     if (concentric) {
-      radius = [_centerStyleView effectiveRadiusForCorner:UIRectCornerAllCorners];
+      radius = [self alignedConcentricCornerRadius];
+    }
+    // Resolve concentric geometry on the stationary measurement view only.
+    // The real center and border must not re-resolve as they move offscreen.
+    UICornerConfiguration *configuration =
+        [UICornerConfiguration configurationWithUniformRadius:[UICornerRadius fixedRadius:radius]];
+    if (![_centerStyleView.cornerConfiguration isEqual:configuration]) {
+      [UIView performWithoutAnimation:^{
+        _centerStyleView.cornerConfiguration = configuration;
+        _centerStyleView.borderView.cornerConfiguration = configuration;
+      }];
     }
   } else {
     _centerStyleView.layer.cornerRadius = radius;
@@ -1530,6 +1590,9 @@ extern CGFloat const MMDrawerDefaultShadowOpacity;
   [self stopSlidingTracking];
   [self detachPresentedSheet];
 
+  [_centerCornerMeasurementContainer removeFromSuperview];
+  _centerCornerMeasurementContainer = nil;
+  _centerCornerMeasurementView = nil;
   _callback = nil;
   _slidingCallback = nil;
 
